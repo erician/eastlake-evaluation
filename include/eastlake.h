@@ -1,7 +1,9 @@
 #ifndef EASTLAKE_H_
 #define EASTLAKE_H_
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <fcntl.h>
 #include <stdio.h>
