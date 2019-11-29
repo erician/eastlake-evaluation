@@ -20,7 +20,6 @@
 #include "slab.h"
 
 #define PAGE_SIZE 4096
-#define USE_SLAB
 
 /*
  * struct po_stat

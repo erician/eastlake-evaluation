@@ -21,6 +21,7 @@
 #define INPLACE
 /* #define USE_AEP */
 #define USE_EASTLAKE
+#define USE_SLAB
 
 #ifdef USE_EASTLAKE
 #ifndef EASTLAKE_H_
