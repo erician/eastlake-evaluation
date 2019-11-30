@@ -17,5 +17,11 @@ seqread: seqread.o
 seqread.o: seqread.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+seqwrite: seqwrite.o
+	$(LD) $(CFLAGS) -o $@ $^ $(LIBS) 
+
+seqwrite.o: seqwrite.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 clean:
-	rm -f  test $(JUNK) 
+	rm -f  test $(JUNK) seqwrite seqread
