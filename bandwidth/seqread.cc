@@ -4,11 +4,12 @@
 
 #include <errno.h>
 #include <sys/time.h>
+#include <thread>
 
-#define PO_NAME     "seqread10"
+#define PO_NAME     "seqread"
 #define MAX_PO_EXTEND_SIZE  (1024*4*1024UL)
 #define PO_SIZE     (MAX_PO_EXTEND_SIZE * 100)
-#define NR_THREAD   1
+#define NR_THREAD   4
 
 double my_second() {
     struct timeval tp;
@@ -43,30 +44,38 @@ void Cleanup() {
     printf("Cleanup successfully\n");
 }
 
-void SeqRead() {
-    printf("start to SeqRead\n");
-    int pod;
-    pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-
+void SeqReadThread(int pod, int thread_num, int thread_id) {
+    unsigned long long each_thread_read_size = PO_SIZE/MAX_PO_EXTEND_SIZE/thread_num;
     unsigned long *addr;
     unsigned long tmp;
-    for (unsigned long i=0; i<PO_SIZE/MAX_PO_EXTEND_SIZE; i++) {
-        //printf("i: %d\n", i);
+    for(unsigned long long i=thread_id*each_thread_read_size; \
+        i < ((thread_id+1)*each_thread_read_size); i++) {
         addr = (unsigned long *)po_mmap(0, MAX_PO_EXTEND_SIZE, \
             PROT_READ|PROT_WRITE, MAP_PRIVATE, pod, i*MAX_PO_EXTEND_SIZE);
         for (unsigned long j=0; j<MAX_PO_EXTEND_SIZE/(sizeof(unsigned long)); j++) {
             tmp = *(addr + j);
         }
     }
-    po_close(pod);
 }
 
 int main() {
     Prepare();
-    double start = my_second();
-    SeqRead();
-    double end = my_second();
-    printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-        NR_THREAD, PO_SIZE, end-start, PO_SIZE/(end-start));
+
+    double start, end;
+    int pod;
+    std::thread *threads[NR_THREAD];
+    for(int thread_num=0; thread_num<NR_THREAD; thread_num++) {
+        start = my_second();
+        pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
+        for(long long int i=0; i<=thread_num; i++)
+            threads[i] = new std::thread(SeqReadThread, pod, thread_num+1, i);
+        for(int i=0; i<=thread_num; i++)
+            threads[i]->join();
+        end = my_second();
+        po_close(pod);
+        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
+            thread_num, PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+    }
+    
     Cleanup();
 }
