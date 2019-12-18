@@ -8,9 +8,9 @@
 #include <string.h>
 
 #define PO_NAME     "seqwrite"
-#define MAX_PO_EXTEND_SIZE  (1024*4*1024UL)
-#define PO_SIZE     (MAX_PO_EXTEND_SIZE * 100)
-#define NR_THREAD   4
+#define MAX_PO_EXTEND_SIZE  (256*1024*1024UL)
+#define PO_SIZE     (MAX_PO_EXTEND_SIZE * NR_THREAD)
+#define NR_THREAD   16
 
 char *buff;
 
