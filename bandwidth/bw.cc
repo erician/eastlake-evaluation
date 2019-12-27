@@ -12,12 +12,21 @@
 // #define EXTEND_MAP_SIZE      (1*1024*1024*1024L)
 #define PO_SIZE                 (160*1024*1024L)
 #define EXTEND_MAP_SIZE         (10*1024*1024L)
-#define BLOCK_SIZE              (4096L)
-#define BLOCK_NUM               (EXTEND_MAP_SIZE/BLOCK_SIZE)
 #define MAX_THREAD_NUM          (16L)
 
+// the all different BLOCK_SIZE that we test
+// #define BLOCK_SIZE_LENGTH 9
+// uint64_t BLOCK_SIZE_LIST[BLOCK_SIZE_LENGTH] = {
+//     16, 32, 64, 128, 256, 512, 1024, 2048, 4096,};
+#define BLOCK_SIZE_LENGTH 1
+uint64_t BLOCK_SIZE_LIST[BLOCK_SIZE_LENGTH] = {
+    4096,};
+long BLOCK_SIZE = 0;
+long BLOCK_NUM = 0;
+
+// the number of threads that we test
 const int thread_num_cnt = 5;
-const int thread_num[5] = {1, 2, 4, 8, 16};
+const int thread_num[thread_num_cnt] = {1, 2, 4, 8, 16};
 
 long *access_pattern = NULL;
 
@@ -46,6 +55,7 @@ void Prepare() {
         }
     }
     po_close(pod);
+    srand(time(NULL));
 }
 
 void Cleanup() {
@@ -80,17 +90,23 @@ void SeqRead() {
     double start, end;
     int pod;
     std::thread *threads[MAX_THREAD_NUM];
-    for(int t=0; t<thread_num_cnt; t+=1) {
-        start = my_second();
-        pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-        for(long long int i=0; i<thread_num[t]; i++)
-            threads[i] = new std::thread(SeqReadThread, pod, i, thread_num[t]);
-        for(int i=0; i<thread_num[t]; i++)
-            threads[i]->join();
-        end = my_second();
-        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
-        po_close(pod);
+    for (int len=0; len<BLOCK_SIZE_LENGTH; len++) {
+        BLOCK_SIZE = BLOCK_SIZE_LIST[len];
+        BLOCK_NUM = EXTEND_MAP_SIZE/BLOCK_SIZE;
+        printf("BLOCK_SIZE: %ld\n", BLOCK_SIZE);
+
+        for(int t=0; t<thread_num_cnt; t+=1) {
+            start = my_second();
+            pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
+            for(long long int i=0; i<thread_num[t]; i++)
+                threads[i] = new std::thread(SeqReadThread, pod, i, thread_num[t]);
+            for(int i=0; i<thread_num[t]; i++)
+                threads[i]->join();
+            end = my_second();
+            printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
+                thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+            po_close(pod);
+        }
     }
 }
 
@@ -119,17 +135,23 @@ void SeqWrite() {
     double start, end;
     int pod;
     std::thread *threads[MAX_THREAD_NUM];
-    for(int t=0; t<thread_num_cnt; t+=1) {
-        start = my_second();
-        pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-        for(long long int i=0; i<thread_num[t]; i++)
-            threads[i] = new std::thread(SeqWriteThread, pod, i, thread_num[t]);
-        for(int i=0; i<thread_num[t]; i++)
-            threads[i]->join();
-        end = my_second();
-        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
-        po_close(pod);
+    for (int len=0; len<BLOCK_SIZE_LENGTH; len++) {
+        BLOCK_SIZE = BLOCK_SIZE_LIST[len];
+        BLOCK_NUM = EXTEND_MAP_SIZE/BLOCK_SIZE;
+        printf("BLOCK_SIZE: %ld\n", BLOCK_SIZE);
+
+        for(int t=0; t<thread_num_cnt; t+=1) {
+            start = my_second();
+            pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
+            for(long long int i=0; i<thread_num[t]; i++)
+                threads[i] = new std::thread(SeqWriteThread, pod, i, thread_num[t]);
+            for(int i=0; i<thread_num[t]; i++)
+                threads[i]->join();
+            end = my_second();
+            printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
+                thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+            po_close(pod);
+        }
     }
 }
 
@@ -157,17 +179,28 @@ void RandRead() {
     double start, end;
     int pod;
     std::thread *threads[MAX_THREAD_NUM];
-    for(int t=0; t<thread_num_cnt; t+=1) {
-        start = my_second();
-        pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-        for(long long int i=0; i<thread_num[t]; i++)
-            threads[i] = new std::thread(RandReadThread, pod, i, thread_num[t]);
-        for(int i=0; i<thread_num[t]; i++)
-            threads[i]->join();
-        end = my_second();
-        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
-        po_close(pod);
+    for (int len=0; len<BLOCK_SIZE_LENGTH; len++) {
+        BLOCK_SIZE = BLOCK_SIZE_LIST[len];
+        BLOCK_NUM = EXTEND_MAP_SIZE/BLOCK_SIZE;
+        // prepare access pattern
+        access_pattern = (long *)malloc(sizeof(long) * BLOCK_NUM);
+        for(long i = 0; i < BLOCK_NUM; i++) {
+            access_pattern[i] = rand()%(BLOCK_NUM);
+	    }
+        printf("BLOCK_SIZE: %ld\n", BLOCK_SIZE);
+
+        for(int t=0; t<thread_num_cnt; t+=1) {
+            start = my_second();
+            pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
+            for(long long int i=0; i<thread_num[t]; i++)
+                threads[i] = new std::thread(RandReadThread, pod, i, thread_num[t]);
+            for(int i=0; i<thread_num[t]; i++)
+                threads[i]->join();
+            end = my_second();
+            printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
+                thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+            po_close(pod);
+        }
     }
 }
 
@@ -196,17 +229,28 @@ void RandWrite() {
     double start, end;
     int pod;
     std::thread *threads[MAX_THREAD_NUM];
-    for(int t=0; t<thread_num_cnt; t+=1) {
-        start = my_second();
-        pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-        for(long long int i=0; i<thread_num[t]; i++)
-            threads[i] = new std::thread(RandWriteThread, pod, i, thread_num[t]);
-        for(int i=0; i<thread_num[t]; i++)
-            threads[i]->join();
-        end = my_second();
-        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
-        po_close(pod);
+    for (int len=0; len<BLOCK_SIZE_LENGTH; len++) {
+        BLOCK_SIZE = BLOCK_SIZE_LIST[len];
+        BLOCK_NUM = EXTEND_MAP_SIZE/BLOCK_SIZE;
+        // prepare access pattern
+        access_pattern = (long *)malloc(sizeof(long) * BLOCK_NUM);
+        for(long i = 0; i < BLOCK_NUM; i++) {
+            access_pattern[i] = rand()%(BLOCK_NUM);
+	    }
+        printf("BLOCK_SIZE: %ld\n", BLOCK_SIZE);
+
+        for(int t=0; t<thread_num_cnt; t+=1) {
+            start = my_second();
+            pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
+            for(long long int i=0; i<thread_num[t]; i++)
+                threads[i] = new std::thread(RandWriteThread, pod, i, thread_num[t]);
+            for(int i=0; i<thread_num[t]; i++)
+                threads[i]->join();
+            end = my_second();
+            printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
+                thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+            po_close(pod);
+        }
     }
 }
 
@@ -217,12 +261,7 @@ int main() {
     SeqRead();
     printf("SeqWrite: \n");
     SeqWrite();
-    // prepare access pattern
-    srand(time(NULL));
-    access_pattern = (long *)malloc(sizeof(long) * BLOCK_NUM);
-    for(long i = 0; i < BLOCK_NUM; i++) {
-        access_pattern[i] = rand()%(BLOCK_NUM);
-	}
+    
     printf("RandRead: \n");
     RandRead();
     printf("RandWrite: \n");

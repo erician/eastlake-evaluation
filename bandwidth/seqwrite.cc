@@ -7,14 +7,17 @@
 #include <thread>
 #include <string.h>
 
-#define PO_NAME             "seqwrite1"
-#define EACH_THREAD_RW_SIZE (2*1024*1024*1024UL)
-#define BLOCK_SIZE          (4*1024)
-#define BLOCK_NUM           (EACH_THREAD_RW_SIZE/BLOCK_SIZE)
-#define NR_THREAD           16
-#define PO_SIZE             (EACH_THREAD_RW_SIZE * NR_THREAD)
+#define PO_NAME             "seqwrite"
+// #define PO_SIZE             (16*1024*1024*1024L)
+// #define EXTEND_MAP_SIZE     (1*1024*1024*1024L)
+#define PO_SIZE             (160*1024*1024L)
+#define EXTEND_MAP_SIZE     (10*1024*1024L)
+#define BLOCK_SIZE          (4096L)
+#define BLOCK_NUM           (EXTEND_MAP_SIZE/BLOCK_SIZE)
+#define MAX_THREAD_NUM           (16L)
 
-char *buff;
+const int thread_num_cnt = 5;
+const int thread_num[5] = {1, 2, 4, 8, 16};
 
 double my_second() {
     struct timeval tp;
@@ -30,16 +33,17 @@ void Prepare() {
         printf("Prepare po_creat, errno: %d\n", errno);
         exit(-1);
     }
-    for (int i=0; i<PO_SIZE/EACH_THREAD_RW_SIZE; i++) {
-        if (po_extend(pod, EACH_THREAD_RW_SIZE, \
-            PROT_READ|PROT_WRITE, MAP_PRIVATE) == 0) {
+    for (int i=0; i<PO_SIZE/EXTEND_MAP_SIZE; i++) {
+        char *addr = (char *)po_extend(pod, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE);
+        if (addr == NULL || addr < 0) {
             printf("Prepare po_extend, errno: %d\n", errno);
             exit(-1);
+        } else {
+            for(long j = 0; j < EXTEND_MAP_SIZE; j++)
+                addr[j] = j;
         }
     }
     po_close(pod);
-    buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
-    memset(buff, 'a', BLOCK_SIZE);
 }
 
 void Cleanup() {
@@ -50,17 +54,24 @@ void Cleanup() {
     printf("Cleanup successfully\n");
 }
 
-void SeqWriteThread(int pod, int thread_id) {
-    char *addr;
-    unsigned long tmp;
-    addr = (char *)po_mmap(0, EACH_THREAD_RW_SIZE, \
-        PROT_READ|PROT_WRITE, MAP_PRIVATE, pod, thread_id*EACH_THREAD_RW_SIZE);
-    if (addr == NULL || addr < 0) {
-        printf("po_mmap failed: %ld\n", (long)addr);
-        exit(-1);
+void SeqWriteThread(int pod, int thread_id, int all_threads_num) {
+    long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
+    char *addrs[each_thread_rw_extend_num];
+    for(long i=0; i<each_thread_rw_extend_num; i++) {
+        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
+            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
+        if (addrs[i] == NULL || addrs[i] < 0) {
+            printf("po_mmap failed: %ld\n", (long)addrs[i]);
+            exit(-1);
+        }
+        //printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
     }
-    for (int i=0; i<BLOCK_NUM; i++) {
-        memcpy(addr+i*BLOCK_SIZE, buff, BLOCK_SIZE);
+    char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
+    memset(buff, 'a', BLOCK_SIZE);
+    for(long i=0; i<each_thread_rw_extend_num; i++) {
+        for (long j=0; j<BLOCK_NUM; j++) {
+            memcpy(addrs[i]+j*BLOCK_SIZE, buff, BLOCK_SIZE);
+        }
     }
 }
 
@@ -68,18 +79,19 @@ int main() {
     Prepare();
     double start, end;
     int pod;
-    std::thread *threads[NR_THREAD];
-    for(int thread_num=0; thread_num<NR_THREAD; thread_num++) {
+    std::thread *threads[MAX_THREAD_NUM];
+    for(int t=0; t<thread_num_cnt; t+=1) {
         start = my_second();
         pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
-        for(long long int i=0; i<=thread_num; i++)
-            threads[i] = new std::thread(SeqWriteThread, pod, i);
-        for(int i=0; i<=thread_num; i++)
+        for(long long int i=0; i<thread_num[t]; i++)
+            threads[i] = new std::thread(SeqWriteThread, pod, i, thread_num[t]);
+        for(int i=0; i<thread_num[t]; i++)
             threads[i]->join();
         end = my_second();
         printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num+1, PO_SIZE, end-start, EACH_THREAD_RW_SIZE*(thread_num+1)/(end-start)/1024/1024);
+            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
         po_close(pod);
     }
+
     Cleanup();
 }
