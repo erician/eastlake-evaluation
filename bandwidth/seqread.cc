@@ -5,11 +5,20 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <thread>
+#include <string.h>
 
-#define PO_NAME     "seqread"
-#define MAX_PO_EXTEND_SIZE  (256*1024*1024UL)
-#define PO_SIZE     (MAX_PO_EXTEND_SIZE * NR_THREAD)
-#define NR_THREAD   16
+#define PO_NAME             "seqwrite"
+#define PO_SIZE             (16*1024*1024*1024L)
+#define EXTEND_MAP_SIZE     (1*1024*1024*1024L)
+#define BLOCK_SIZE          (4096L)
+#define BLOCK_NUM           (EXTEND_MAP_SIZE/BLOCK_SIZE)
+#define NR_THREAD           (16L)
+
+
+// #define PO_SIZE             (EACH_THREAD_RW_SIZE * NR_THREAD)
+
+// #define EACH_THREAD_RW_SIZE (1024*1024*1024UL)
+
 
 double my_second() {
     struct timeval tp;
@@ -25,9 +34,8 @@ void Prepare() {
         printf("Prepare po_creat, errno: %d\n", errno);
         exit(-1);
     }
-    for (int i=0; i<PO_SIZE/MAX_PO_EXTEND_SIZE; i++) {
-        //printf("i: %d\n", i);
-        if (po_extend(pod, MAX_PO_EXTEND_SIZE, \
+    for (int i=0; i<PO_SIZE/EXTEND_MAP_SIZE; i++) {
+        if (po_extend(pod, EXTEND_MAP_SIZE, \
             PROT_READ|PROT_WRITE, MAP_PRIVATE) == 0) {
             printf("Prepare po_extend, errno: %d\n", errno);
             exit(-1);
@@ -44,38 +52,42 @@ void Cleanup() {
     printf("Cleanup successfully\n");
 }
 
-void SeqReadThread(int pod, int thread_num, int thread_id) {
-    unsigned long long each_thread_read_size = PO_SIZE/MAX_PO_EXTEND_SIZE/thread_num;
-    unsigned long *addr;
-    unsigned long tmp;
-    for(unsigned long long i=thread_id*each_thread_read_size; \
-        i < ((thread_id+1)*each_thread_read_size); i++) {
-        addr = (unsigned long *)po_mmap(0, MAX_PO_EXTEND_SIZE, \
-            PROT_READ|PROT_WRITE, MAP_PRIVATE, pod, i*MAX_PO_EXTEND_SIZE);
-        for (unsigned long j=0; j<MAX_PO_EXTEND_SIZE/(sizeof(unsigned long)); j++) {
-            tmp = *(addr + j);
+void SeqReadThread(int pod, int thread_id, int all_threads_num) {
+    long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
+    char *addrs[each_thread_rw_extend_num];
+    for(long i=0; i<each_thread_rw_extend_num; i++) {
+        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
+            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
+        if (addrs[i] == NULL || addrs[i] < 0) {
+            printf("po_mmap failed: %ld\n", (long)addrs[i]);
+            exit(-1);
+        }
+    }
+    char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
+    for(long i=0; i<each_thread_rw_extend_num; i++) {
+        for (long j=0; j<BLOCK_NUM; j++) {
+            memcpy(buff, addrs[i]+j*BLOCK_SIZE, BLOCK_SIZE);
         }
     }
 }
 
 int main() {
     Prepare();
-
     double start, end;
     int pod;
     std::thread *threads[NR_THREAD];
-    for(int thread_num=0; thread_num<NR_THREAD; thread_num++) {
+    for(int thread_num=0; thread_num<NR_THREAD; thread_num+=2) {
         start = my_second();
         pod = po_open(PO_NAME, O_CREAT|O_RDWR, 0);
         for(long long int i=0; i<=thread_num; i++)
-            threads[i] = new std::thread(SeqReadThread, pod, thread_num+1, i);
+            threads[i] = new std::thread(SeqReadThread, pod, i, thread_num+1);
         for(int i=0; i<=thread_num; i++)
             threads[i]->join();
         end = my_second();
-        po_close(pod);
         printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num, PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+            thread_num+1, PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+        po_close(pod);
     }
-    
+
     Cleanup();
 }

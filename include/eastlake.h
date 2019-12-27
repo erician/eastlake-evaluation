@@ -87,7 +87,7 @@ static inline long po_fstat(unsigned int pod, struct po_stat *statbuf) {
 static void *po_malloc(int pod, size_t size) {
     long int retval = po_extend(pod, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE);
 	if (retval == -1)
-        return nullptr;
+        return NULL;
     return (void*)retval;
 }
 
