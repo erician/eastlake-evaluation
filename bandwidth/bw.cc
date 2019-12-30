@@ -8,13 +8,13 @@
 #include <string.h>
 
 #define PO_NAME                 "seqwrite"
-// #define PO_SIZE              (16*1024*1024*1024L)
-// #define EXTEND_MAP_SIZE      (1*1024*1024*1024L)
-#define PO_SIZE                 (160*1024*1024L)
-#define EXTEND_MAP_SIZE         (10*1024*1024L)
+#define PO_SIZE                 (16*1024*1024*1024L)
+#define EXTEND_MAP_SIZE         (1*1024*1024*1024L)
+//#define PO_SIZE               (160*1024*1024L)
+//#define EXTEND_MAP_SIZE       (10*1024*1024L)
 #define MAX_THREAD_NUM          (16L)
 
-// the all different BLOCK_SIZE that we test
+//the all different BLOCK_SIZE that we test
 // #define BLOCK_SIZE_LENGTH 9
 // uint64_t BLOCK_SIZE_LIST[BLOCK_SIZE_LENGTH] = {
 //     16, 32, 64, 128, 256, 512, 1024, 2048, 4096,};

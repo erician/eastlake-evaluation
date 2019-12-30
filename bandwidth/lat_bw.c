@@ -13,8 +13,6 @@
 #include <time.h>
 #include <stdint.h>
 
-#define TEST_EASTLAKE
-
 #ifndef EASTLAKE_H_
 #include "eastlake.h"
 #endif
@@ -27,7 +25,8 @@
 	#define MEM_SIZE (16L * 1024 * 1024 * 1024)
 #endif 
 
-#define NR_THREAD	1
+#define TEST_EASTLAKE
+#define NR_THREAD	16
 
 int THREAD_NUM = 0;
 pthread_t tids[NR_THREAD];
@@ -36,7 +35,6 @@ uint64_t BLOCK_NUM = 0;
 STREAM_TYPE *pmem = NULL;
 double start, end;
 long long each_thread_access_num = 0;
-long long *access_pattern = NULL;
 
 #ifdef TEST_EASTLAKE
 int pod = 0;
@@ -56,14 +54,12 @@ double mysecond()
         return ( (double)tp.tv_sec + (double)tp.tv_usec * 1.e-6 );
 }
 
-void *read_thread(void *tid) {
-        STREAM_TYPE **start = (STREAM_TYPE **)po_mmap(0, each_thread_access_num, \
-            PROT_READ|PROT_WRITE, MAP_PRIVATE, pod, ((long)tid)*each_thread_access_num);
+void *read_thread(void *start) {
         char* buffer = (char*)malloc(BLOCK_SIZE);
         // init buffer
 	memset(buffer, 0, BLOCK_SIZE);
         for (int i = 0; i < each_thread_access_num; i++) {
-                memcpy(buffer, start + access_pattern[i], BLOCK_SIZE);
+                memcpy(buffer, ((STREAM_TYPE **)start)[i], BLOCK_SIZE);
         }
         free(buffer);
 }
@@ -85,30 +81,32 @@ seqread() {
 	for (i = 0; i < BLOCK_SIZE_LENGTH; i++) {
         	BLOCK_SIZE = BLOCK_SIZE_LIST[i];
                 BLOCK_NUM = MEM_SIZE / BLOCK_SIZE;      
-	
+
+                //STREAM_TYPE* access_list[BLOCK_NUM];
+                STREAM_TYPE** access_list = (STREAM_TYPE**)malloc(sizeof(STREAM_TYPE*) * BLOCK_NUM);
+		// populate it with the addr
+                for(j = 0; j < BLOCK_NUM; j++) {
+                        access_list[j] = pmem + j * BLOCK_SIZE;
+                }
+
                 for (int thread_num = 0; thread_num < NR_THREAD; thread_num++) {
                         each_thread_access_num = BLOCK_NUM/(thread_num+1);
-                        access_pattern = (long long *)malloc(sizeof(long long)*each_thread_access_num);
-                        for (int i=0; i<each_thread_access_num; i++)
-                                access_pattern[i] = 0 + i*BLOCK_SIZE;
                         start = mysecond();
                         for (long i=0; i<thread_num+1; i++) {
-                                if (pthread_create(&tids[i], NULL, read_thread, (void *)(i)) != 0) {
+                                if (pthread_create(&tids[i], NULL, read_thread, \
+                                        (void *)(access_list+i*each_thread_access_num)) != 0) {
                                         printf("pthread_create failed\n");
                                         exit(-1);
                                 }
                         }
-                        end = mysecond();
-                        printf("create thread time: %fs\n", end-start);
-                        start = mysecond();
                         for (int i=0; i<thread_num+1; i++) {
                                 pthread_join(tids[i], NULL);
                         }
                         end = mysecond();
-                        free(access_pattern);
                         printf("THREAD_NUM: %d BLOCK_SIZE:%lu time: %fs bw:%fMB/s latency:%fns\n", thread_num+1, BLOCK_SIZE, end-start, \
                                 BLOCK_NUM*BLOCK_SIZE*sizeof(STREAM_TYPE)/(end-start)/1024/1024, (end-start)*1.e9/BLOCK_NUM);
                 }
+                free(access_list);
         }
 }
 
@@ -135,8 +133,6 @@ void seqwrite() {
                                         exit(-1);
                                 }
                         }
-                        end = mysecond();
-                        printf("create thread time: %f\n", end-start);
                         for (int i=0; i<thread_num+1; i++) {
                                 pthread_join(tids[i], NULL);
                         }
@@ -283,13 +279,13 @@ int main(void)
 	printf("start seqwrite()\n");
 	seqwrite();
 	
-	// // randread
-	// printf("start randread()\n");
-	// randread();
+	// randread
+	printf("start randread()\n");
+	randread();
 
-	// // randwrite
-	// printf("start randwrite()\n");
-	// randwrite();
+	// randwrite
+	printf("start randwrite()\n");
+	randwrite();
 
 #ifdef TEST_EASTLAKE
         po_close(pod);
