@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <stdint.h>
+#include <xmmintrin.h>
 
 #ifndef EASTLAKE_H_
 #include "eastlake.h"
@@ -69,7 +70,20 @@ void *write_thread(void *start) {
         // init buffer
 	memset(buffer, 0, BLOCK_SIZE);
         for (int i = 0; i < each_thread_access_num; i++) {
-                memcpy(((STREAM_TYPE **)start)[i], buffer, BLOCK_SIZE);
+                for (int j=0; j<BLOCK_SIZE; j+=8) {
+                        // use non-temporal stores, please see:
+                        // https://software.intel.com/sites/landingpage/IntrinsicsGuide/#text=MOVNTi&expand=5667,5675
+                        _mm_stream_si64((long long *)(((STREAM_TYPE **)start)[i] + j), (-1L));
+                        // general stores
+                        // *(long long *)(((STREAM_TYPE **)start)[i] + j) = (-1L);
+                        // check data
+                        // if (*(long long *)(((STREAM_TYPE **)start)[i] + j) != (-1L)) {
+                        //         printf("error when assign value\n");
+                        //         exit(-1);
+                        // }
+                }
+                // use memcpy
+                // memcpy(((STREAM_TYPE **)start)[i], buffer, BLOCK_SIZE);
         }
         free(buffer);
 }
