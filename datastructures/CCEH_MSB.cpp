@@ -280,7 +280,7 @@ RETRY:
      }
 #else
 #ifdef USE_EASTLAKE_JEMALLOC
-    _dir = (Segment **)malloc(dir.capacity*2*8);
+    posix_memalign((void **)(&_dir), 64, dir.capacity*2*8);
 #else
     posix_memalign(&_dir, 64, dir.capacity*2*8);
 #endif

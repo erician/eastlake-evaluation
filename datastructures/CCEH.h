@@ -80,7 +80,7 @@ struct Segment {
      }
 #else
 #ifdef USE_EASTLAKE_JEMALLOC
-    ret = malloc(size);
+    posix_memalign(&ret, 64, size);
 #else
     posix_memalign(&ret, 64, size);
 #endif
@@ -106,7 +106,7 @@ struct Segment {
      }
 #else
 #ifdef USE_EASTLAKE_JEMALLOC
-    ret = malloc(size);
+    posix_memalign(&ret, 64, size);
 #else
     posix_memalign(&ret, 64, size);
 #endif
@@ -236,7 +236,11 @@ class CCEH : public Hash {
         exit(1);    
      }
 #else
+#ifdef USE_EASTLAKE_JEMALLOC
     posix_memalign(&ret, 64, size);
+#else
+    posix_memalign(&ret, 64, size);
+#endif
 #endif
 #endif
       return ret;

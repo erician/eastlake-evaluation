@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 
-//#define USE_AEP
+#define USE_EASTLAKE_JEMALLOC
 
 #ifdef USE_AEP
 #ifndef AEP_H_
@@ -55,7 +55,11 @@ struct Pair {
         exit(1);    
      }
 #else
+#ifdef USE_EASTLAKE_JEMALLOC
     posix_memalign(&ret, 64, size);
+#else
+    posix_memalign(&ret, 64, size);
+#endif
 #endif
 #endif
     return ret;
@@ -77,7 +81,11 @@ struct Pair {
         exit(1);    
      }
 #else
+#ifdef USE_EASTLAKE_JEMALLOC
     posix_memalign(&ret, 64, size);
+#else
+    posix_memalign(&ret, 64, size);
+#endif
 #endif
 #endif
     return ret;
