@@ -264,7 +264,29 @@ RETRY:
       } else {  // directory doubling
        // timer.Start();
         auto d = dir._;
-        auto _dir = new Segment*[dir.capacity*2];
+        Segment **_dir;
+#ifdef USE_AEP
+    _dir = (Segment **)vmem_malloc(dir.capacity*2*8);
+    if (_dir == NULL){
+        std::cout << "aep _dir" << std::endl;
+        exit(1);
+    }
+#else
+#ifdef USE_LIBVMEMALLOC
+     _dir = (Segment **)memalign(kCacheLineSize, dir.capacity*2*8);
+     if(ret == NULL) {
+        std::cout << "libvmemalloc _dir" << std::endl;
+        exit(1);
+     }
+#else
+#ifdef USE_EASTLAKE_JEMALLOC
+    _dir = (Segment **)malloc(dir.capacity*2*8);
+#else
+    posix_memalign(&_dir, 64, dir.capacity*2*8);
+#endif
+#endif
+#endif
+
         for (unsigned i = 0; i < dir.capacity; ++i) {
           if (i == x) {
             _dir[2*i] = s[0];

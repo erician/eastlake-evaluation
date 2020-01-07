@@ -18,15 +18,14 @@
 #include "hash.h"
 #endif
 
+#define USE_EASTLAKE_JEMALLOC
+
 #define INPLACE
 /* #define USE_AEP */
 #define USE_EASTLAKE
-#define USE_SLAB
 
-#ifdef USE_EASTLAKE
-#ifndef EASTLAKE_H_
-#include "eastlake.h"
-#endif
+#ifdef USE_EASTLAKE_JEMALLOC
+#include <jemalloc/jemalloc.h>
 #endif
 
 #ifdef USE_AEP
@@ -80,8 +79,8 @@ struct Segment {
         exit(1);    
      }
 #else
-#ifdef USE_EASTLAKE
-    ret = po_malloc(sch);
+#ifdef USE_EASTLAKE_JEMALLOC
+    ret = malloc(size);
 #else
     posix_memalign(&ret, 64, size);
 #endif
@@ -106,8 +105,8 @@ struct Segment {
         exit(1);    
      }
 #else
-#ifdef USE_EASTLAKE
-    ret = po_malloc(sch);
+#ifdef USE_EASTLAKE_JEMALLOC
+    ret = malloc(size);
 #else
     posix_memalign(&ret, 64, size);
 #endif
@@ -149,9 +148,8 @@ struct Directory {
 	   exit(1);
     }
 #else
-#ifdef USE_EASTLAKE
-    _ = (Segment**)po_extend(pod, PAGE_SIZE*((capacity*8+PAGE_SIZE-1)/PAGE_SIZE), \
-      PROT_READ|PROT_WRITE, MAP_PRIVATE);
+#ifdef USE_EASTLAKE_JEMALLOC
+    _ = (Segment**)malloc(capacity*8);
 #else
     _ = new Segment*[capacity];
 #endif
@@ -173,9 +171,8 @@ struct Directory {
 	   exit(1);
     }
 #else
-#ifdef USE_EASTLAKE
-    _ = (Segment**)po_extend(pod, PAGE_SIZE*((capacity*8+PAGE_SIZE-1)/PAGE_SIZE), \
-      PROT_READ|PROT_WRITE, MAP_PRIVATE);
+#ifdef USE_EASTLAKE_JEMALLOC
+    _ = (Segment**)malloc(capacity*8);
 #else
     _ = new Segment*[capacity];
 #endif

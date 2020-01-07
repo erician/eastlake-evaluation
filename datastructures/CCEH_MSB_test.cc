@@ -13,7 +13,7 @@
 #define CONFIG_SCAS_COUNTER
 #endif
 
-#define NR_OPERATIONS   1600000    // the data you generated must be greater or equal to this
+#define NR_OPERATIONS   16000000    // the data you generated must be greater or equal to this
 #define INPUT_FILE      "data"      // using input_gen.cpp to generate data file
 
 #define NR_THREADS      1        // must be equal or less nr_cpus
@@ -56,10 +56,6 @@ int main() {
     // get keys and values from file
 #ifdef USE_AEP
     init_vmp();
-#else
-#ifdef USE_EASTLAKE
-    init_eastlake("a4", sizeof(Segment));
-#endif
 #endif
     Key_t *keys = new Key_t[NR_OPERATIONS];
     Value_t *values = new Value_t[NR_OPERATIONS];
@@ -108,8 +104,5 @@ int main() {
      times[1] = mysecond();
     print_result(cceh);
     //delete cceh;
-#ifdef USE_EASTLAKE
-    destroy_eastlake("a4");
-#endif
     return 0; 
 }
