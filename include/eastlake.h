@@ -17,8 +17,6 @@
 #include <errno.h>
 #include <stdlib.h>
 
-#include "slab.h"
-
 #define PAGE_SIZE 4096
 
 /*
