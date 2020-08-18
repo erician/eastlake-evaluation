@@ -23,7 +23,8 @@
 #endif
 
 #ifndef MEM_SIZE
-	#define MEM_SIZE (16L * 1024 * 1024 * 1024)
+        // #define MEM_SIZE (16L * 1024 * 1024 * 1024)
+	#define MEM_SIZE (160L * 1024 * 1024)
 #endif 
 
 #define TEST_EASTLAKE
@@ -247,7 +248,7 @@ void randwrite() {
 int main(void)
 {
 	char *path = "/home/tony/Desktop/pmemdir/a";
-        char *po_name = "aaaaaaaaa";
+        char *po_name = "po_name";
 	int is_pmem = 0;
 	size_t mapped_len;	
 	size_t i = 0;

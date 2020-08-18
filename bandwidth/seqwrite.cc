@@ -19,6 +19,9 @@
 const int thread_num_cnt = 5;
 const int thread_num[5] = {1, 2, 4, 8, 16};
 
+// record chunk addr
+char *addrs[PO_SIZE/EXTEND_MAP_SIZE];
+
 double my_second() {
     struct timeval tp;
     int i;
@@ -41,6 +44,7 @@ void Prepare() {
         } else {
             for(long j = 0; j < EXTEND_MAP_SIZE; j++)
                 addr[j] = j;
+            addrs[i] = addr;
         }
     }
     po_close(pod);
@@ -56,16 +60,6 @@ void Cleanup() {
 
 void SeqWriteThread(int pod, int thread_id, int all_threads_num) {
     long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
-    char *addrs[each_thread_rw_extend_num];
-    for(long i=0; i<each_thread_rw_extend_num; i++) {
-        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
-            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-        if (addrs[i] == NULL || addrs[i] < 0) {
-            printf("po_mmap failed: %ld\n", (long)addrs[i]);
-            exit(-1);
-        }
-        //printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-    }
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     memset(buff, 'a', BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
@@ -88,8 +82,8 @@ int main() {
         for(int i=0; i<thread_num[t]; i++)
             threads[i]->join();
         end = my_second();
-        printf("thread number: %d, po size: %ld, time: %lf, bandwidth: %lf\n", \
-            thread_num[t], PO_SIZE, end-start, PO_SIZE/(end-start)/1024/1024);
+        printf("thread number: %d, po size: %ld(MB), time: %lf(s), bandwidth: %lf(MB)\n", \
+            thread_num[t], PO_SIZE/1024/1024, end-start, PO_SIZE/(end-start)/1024/1024);
         po_close(pod);
     }
 
