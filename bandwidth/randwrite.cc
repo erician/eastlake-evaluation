@@ -72,7 +72,7 @@ void RandWriteThread(int pod, int thread_id, int all_threads_num) {
     memset(buff, 'a', BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(addrs[i] + access_pattern[j]*BLOCK_SIZE, buff, BLOCK_SIZE);
+            memcpy(addrs[each_thread_rw_extend_num*thread_id+i] + access_pattern[j]*BLOCK_SIZE, buff, BLOCK_SIZE);
         }
     }
 }

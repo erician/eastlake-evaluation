@@ -7,11 +7,11 @@
 #include <thread>
 #include <string.h>
 
-#define PO_NAME                 "seqwrite"
-#define PO_SIZE                 (16*1024*1024*1024L)
-#define EXTEND_MAP_SIZE         (1*1024*1024*1024L)
-//#define PO_SIZE               (160*1024*1024L)
-//#define EXTEND_MAP_SIZE       (10*1024*1024L)
+#define PO_NAME                 "bw"
+// #define PO_SIZE                 (16*1024*1024*1024L)
+// #define EXTEND_MAP_SIZE         (1*1024*1024*1024L)
+#define PO_SIZE               (160*1024*1024L)
+#define EXTEND_MAP_SIZE       (10*1024*1024L)
 #define MAX_THREAD_NUM          (16L)
 
 //the all different BLOCK_SIZE that we test
@@ -29,6 +29,8 @@ const int thread_num_cnt = 5;
 const int thread_num[thread_num_cnt] = {1, 2, 4, 8, 16};
 
 long *access_pattern = NULL;
+// record chunk addr
+char *addrs[PO_SIZE/EXTEND_MAP_SIZE];
 
 double my_second() {
     struct timeval tp;
@@ -52,6 +54,7 @@ void Prepare() {
         } else {
             for(long j = 0; j < EXTEND_MAP_SIZE; j++)
                 addr[j] = j;
+            addrs[i] = addr;
         }
     }
     po_close(pod);
@@ -68,20 +71,10 @@ void Cleanup() {
 
 void SeqReadThread(int pod, int thread_id, int all_threads_num) {
     long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
-    char *addrs[each_thread_rw_extend_num];
-    for(long i=0; i<each_thread_rw_extend_num; i++) {
-        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
-            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-        if (addrs[i] == NULL || addrs[i] < 0) {
-            printf("po_mmap failed: %ld\n", (long)addrs[i]);
-            exit(-1);
-        }
-        // printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-    }
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(buff, addrs[i]+j*BLOCK_SIZE, BLOCK_SIZE);
+            memcpy(buff, addrs[each_thread_rw_extend_num*thread_id+i]+j*BLOCK_SIZE, BLOCK_SIZE);
         }
     }
 }
@@ -112,21 +105,11 @@ void SeqRead() {
 
 void SeqWriteThread(int pod, int thread_id, int all_threads_num) {
     long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
-    char *addrs[each_thread_rw_extend_num];
-    for(long i=0; i<each_thread_rw_extend_num; i++) {
-        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
-            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-        if (addrs[i] == NULL || addrs[i] < 0) {
-            printf("po_mmap failed: %ld\n", (long)addrs[i]);
-            exit(-1);
-        }
-        //printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-    }
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     memset(buff, 'a', BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(addrs[i]+j*BLOCK_SIZE, buff, BLOCK_SIZE);
+            memcpy(addrs[each_thread_rw_extend_num*thread_id+i]+j*BLOCK_SIZE, buff, BLOCK_SIZE);
         }
     }
 }
@@ -157,20 +140,10 @@ void SeqWrite() {
 
 void RandReadThread(int pod, int thread_id, int all_threads_num) {
     long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
-    char *addrs[each_thread_rw_extend_num];
-    for(long i=0; i<each_thread_rw_extend_num; i++) {
-        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
-            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-        if (addrs[i] == NULL || addrs[i] < 0) {
-            printf("po_mmap failed: %ld\n", (long)addrs[i]);
-            exit(-1);
-        }
-        // printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-    }
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(buff, addrs[i] + access_pattern[j]*BLOCK_SIZE, BLOCK_SIZE);
+            memcpy(buff, addrs[each_thread_rw_extend_num*thread_id+i] + access_pattern[j]*BLOCK_SIZE, BLOCK_SIZE);
         }
     }
 }
@@ -206,21 +179,11 @@ void RandRead() {
 
 void RandWriteThread(int pod, int thread_id, int all_threads_num) {
     long each_thread_rw_extend_num = PO_SIZE/EXTEND_MAP_SIZE/all_threads_num;
-    char *addrs[each_thread_rw_extend_num];
-    for(long i=0; i<each_thread_rw_extend_num; i++) {
-        addrs[i] = (char *)po_mmap(0, EXTEND_MAP_SIZE, PROT_READ|PROT_WRITE, \
-            MAP_PRIVATE, pod, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-        if (addrs[i] == NULL || addrs[i] < 0) {
-            printf("po_mmap failed: %ld\n", (long)addrs[i]);
-            exit(-1);
-        }
-        // printf("%ld, %ld, %ld\n", each_thread_rw_extend_num, thread_id, each_thread_rw_extend_num*thread_id*EXTEND_MAP_SIZE+i*EXTEND_MAP_SIZE);
-    }
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     memset(buff, 'a', BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(addrs[i] + access_pattern[j]*BLOCK_SIZE, buff, BLOCK_SIZE);
+            memcpy(addrs[each_thread_rw_extend_num*thread_id+i] + access_pattern[j]*BLOCK_SIZE, buff, BLOCK_SIZE);
         }
     }
 }

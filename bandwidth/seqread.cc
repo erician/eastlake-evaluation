@@ -63,7 +63,7 @@ void SeqReadThread(int pod, int thread_id, int all_threads_num) {
     char *buff = (char *)malloc(sizeof(char) * BLOCK_SIZE);
     for(long i=0; i<each_thread_rw_extend_num; i++) {
         for (long j=0; j<BLOCK_NUM; j++) {
-            memcpy(buff, addrs[i]+j*BLOCK_SIZE, BLOCK_SIZE);
+            memcpy(buff, addrs[each_thread_rw_extend_num*thread_id+i]+j*BLOCK_SIZE, BLOCK_SIZE);
         }
     }
 }
