@@ -43,6 +43,8 @@ void set_affinity(uint32_t idx) {
     CPU_ZERO(&my_set);
     if (idx % 2 != 0) {
         CPU_SET(idx + 18, &my_set);
+    } else {
+        CPU_SET(idx, &my_set);
     }
     sched_setaffinity(0, sizeof(cpu_set_t), &my_set);
 }

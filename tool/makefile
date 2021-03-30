@@ -1,4 +1,4 @@
-all: reinit_pmem
+all: reinit_pmem delete_po
 .PHONY: clean all
 
 DEFAULT: test
@@ -17,5 +17,10 @@ reinit_pmem: reinit_pmem.o
 reinit_pmem.o: reinit_pmem.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+delete_po: delete_po.o
+	$(LD) $(CFLAGS) -o $@ $^ $(LIBS) 
+delete_po.o: delete_po.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 clean:
-	rm -f $(JUNK) reinit_pmem
+	rm -f $(JUNK) reinit_pmem delete_po
