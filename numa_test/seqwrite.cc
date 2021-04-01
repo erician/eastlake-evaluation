@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sched.h>
 #include <mutex>
+#include <emmintrin.h>
 
 #define PO_NAME             "numa_seqwrite"
 // #define PO_SIZE             (16*1024*1024*1024L)
@@ -49,6 +50,16 @@ void set_affinity(uint32_t idx) {
     sched_setaffinity(0, sizeof(cpu_set_t), &my_set);
 }
 
+void NTwrite(void* dst, void* src, uint64_t size) {
+    uint64_t i;
+    long long * ptr = (long long*)dst;
+    long long * psrc = (long long*)src;
+    for (i = 0; i < size/8; i++) {
+        _mm_stream_si64(ptr + i, *(psrc + i));
+    }
+}
+
+
 void Prepare(int pod, int thread_id, int all_threads_num) {
     set_affinity(thread_id);
     g_mutex.lock();
@@ -80,7 +91,19 @@ void SeqWriteThread(int pod, int thread_id, int all_threads_num) {
     memset(buff, 'a', BLOCK_SIZE);
     
     for (long i=0; i<BLOCK_NUM; i++) {
-        memcpy(addrs[thread_id]+i*BLOCK_SIZE, buff, BLOCK_SIZE);
+        // memcpy(addrs[thread_id]+i*BLOCK_SIZE, buff, BLOCK_SIZE);
+        NTwrite(addrs[thread_id]+i*BLOCK_SIZE, buff, BLOCK_SIZE);
+    }
+}
+
+void sandbox_check() {
+    for (int i = 0; i < PO_SIZE/EXTEND_MAP_SIZE; i++){
+        for (int j = 0; j < EXTEND_MAP_SIZE; j++) {
+            if (*(addrs[i] + j) != 'a') {
+                printf("error!\n");
+                exit(-1);
+            }
+        }
     }
 }
 
@@ -114,6 +137,7 @@ int main() {
             thread_num[t], (EXTEND_MAP_SIZE*thread_num[t])/1024/1024, end-start, (EXTEND_MAP_SIZE*thread_num[t])/(end-start)/1024/1024);
         po_close(pod);
     }
+    //sandbox_check();
 
     Cleanup();
 }
