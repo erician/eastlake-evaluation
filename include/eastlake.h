@@ -81,6 +81,9 @@ static inline long po_chunk_next(unsigned long pod, unsigned long last, \
 	return syscall(410, pod, last, size, addrbuf);
 }
 
+static inline long pmem_init() {
+        return syscall(412);
+}
 /*
  * user library functions in lullaby
  */
