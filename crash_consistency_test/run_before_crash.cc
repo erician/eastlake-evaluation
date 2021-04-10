@@ -40,6 +40,7 @@ static std::string remove_a_po_from_existing_pos() {
         assert(po_close(opened_pos[ret]) >= 0);
         opened_pos.erase(opened_pos.find(ret));
     }
+    delete it->second;
     existing_pos.erase(it);
     return ret;
 }
@@ -111,15 +112,17 @@ int main() {
     std::ofstream op_log(OP_LOG_NAME, std::ios::out);
     while (1) {
         int syscall_num = rand()%11;
-        std::cout << syscall_num << std::endl;
         switch (syscall_num)
         {
 
         /* po_creat */
         case 0: {
-            std::string po_name = generate_po_name();
-            int pod = po_creat(po_name.c_str(), 0);
-            assert(pod >= 0);
+	    std::string po_name;
+	    int pod;
+	    do {
+                po_name = generate_po_name();
+                pod = po_creat(po_name.c_str(), 0);
+            } while (pod < 0);
             existing_pos[po_name] = new std::vector<unsigned long>();
             opened_pos[po_name] = pod;
             op_log << "0 " << po_name << std::endl;
@@ -166,13 +169,10 @@ int main() {
         /* po_chunk_munmap */
         case 5: {
             std::string po_name = get_a_extended_po_from_opened_pos();
-            std::cout << "get_a_extended_po_from_opened_pos" << std::endl;
             if (po_name.size() == 0)
                 break;
             unsigned long addr = (*existing_pos[po_name])[0];
-            std::cout << addr << std::endl;
             assert(po_chunk_munmap(addr) >= 0);
-            std::cout << "5" << std::endl;
             break;
         }
         /* po_extend */
@@ -189,15 +189,12 @@ int main() {
         /* po_shrink */
         case 7: {
             std::string po_name = get_a_extended_po_from_opened_pos();
-            std::cout << "get_a_extended_po_from_opened_pos" << 7 << std::endl;
             if (po_name.size() == 0)
                 break;
             unsigned long addr = (*existing_pos[po_name])[0];
-            std::cout << addr << std::endl;
             assert(po_shrink(opened_pos[po_name], addr, 4096) >= 0);
             op_log << "7 " << po_name << " " << std::to_string(addr) << std::endl;
             existing_pos[po_name]->erase(existing_pos[po_name]->begin());
-            std::cout << "7" << std::endl;
             break;
         }
         /* po_stat */
