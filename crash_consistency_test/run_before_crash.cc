@@ -117,9 +117,9 @@ int main() {
 
         /* po_creat */
         case 0: {
-	    std::string po_name;
-	    int pod;
-	    do {
+	        std::string po_name;
+	        int pod;
+	        do {
                 po_name = generate_po_name();
                 pod = po_creat(po_name.c_str(), 0);
             } while (pod < 0);
@@ -183,6 +183,7 @@ int main() {
             unsigned long addr = po_extend(opened_pos[po_name], 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE);
             assert(addr >= 0);
             op_log << "6 " << po_name << " " << std::to_string(addr) << std::endl;
+            op_log.flush();
             existing_pos[po_name]->push_back(addr);
             break;
         }
@@ -194,6 +195,7 @@ int main() {
             unsigned long addr = (*existing_pos[po_name])[0];
             assert(po_shrink(opened_pos[po_name], addr, 4096) >= 0);
             op_log << "7 " << po_name << " " << std::to_string(addr) << std::endl;
+            op_log.flush();
             existing_pos[po_name]->erase(existing_pos[po_name]->begin());
             break;
         }
