@@ -127,6 +127,7 @@ int main() {
             opened_pos[po_name] = pod;
             op_log << "0 " << po_name << std::endl;
             op_log.flush();
+            std::cout << "po_creat: " << po_name << std::endl;
             break;
         }
         /* po_unlink */
@@ -137,6 +138,7 @@ int main() {
             assert(po_unlink(po_name.c_str()) >= 0);
             op_log << "1 " << po_name << std::endl;
             op_log.flush();
+            std::cout << "po_unlink: " << po_name << std::endl;
             break;
         }
         /* po_open */
@@ -147,6 +149,7 @@ int main() {
             int pod = po_open(po_name.c_str(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
             assert(pod >= 0);
             opened_pos[po_name] = pod;
+            std::cout << "po_open: " << po_name << std::endl;
             break;
         }
         /* po_close */
@@ -155,6 +158,7 @@ int main() {
             if (pod < 0)
                 break;
             assert(po_close(pod) >= 0);
+            std::cout << "po_close: " << pod << std::endl;
             break;
         }
         /* po_chunk_mmap */
@@ -164,6 +168,7 @@ int main() {
                 break;
             unsigned long addr = (*existing_pos[po_name])[0];
             assert(po_chunk_mmap(opened_pos[po_name], addr, PROT_READ | PROT_WRITE, MAP_PRIVATE) == addr);
+            std::cout << "po_chunk_mmap: " << po_name << ", addr: " << addr << std::endl;
             break;
         }
         /* po_chunk_munmap */
@@ -173,6 +178,7 @@ int main() {
                 break;
             unsigned long addr = (*existing_pos[po_name])[0];
             assert(po_chunk_munmap(addr) >= 0);
+            std::cout << "po_chunk_munmap: " << po_name << ", addr: " << addr << std::endl;
             break;
         }
         /* po_extend */
@@ -185,6 +191,7 @@ int main() {
             op_log << "6 " << po_name << " " << std::to_string(addr) << std::endl;
             op_log.flush();
             existing_pos[po_name]->push_back(addr);
+            std::cout << "po_extend: " << po_name << ", addr: " << addr << std::endl;
             break;
         }
         /* po_shrink */
@@ -197,6 +204,7 @@ int main() {
             op_log << "7 " << po_name << " " << std::to_string(addr) << std::endl;
             op_log.flush();
             existing_pos[po_name]->erase(existing_pos[po_name]->begin());
+            std::cout << "po_shrink: " << po_name << ", addr: " << addr << std::endl;
             break;
         }
         /* po_stat */
@@ -207,6 +215,7 @@ int main() {
             struct po_stat stat;
             int ret = po_stat(po_name.c_str(), &stat);
             assert(ret >= 0);
+            std::cout << "po_stat: " << po_name << std::endl;
             break;
         }
         /* po_fstat */
@@ -217,6 +226,7 @@ int main() {
             struct po_stat stat;
             int ret = po_fstat(opened_pos[po_name], &stat);
             assert(ret >= 0);
+            std::cout << "po_fstat: " << po_name << std::endl;
             break;
         }
         /* po_chunk_next */
@@ -231,6 +241,7 @@ int main() {
             for (int i=0; i<chunks->size(); i++) {
                 assert((*chunks)[i] == addrbuf[i]);
             }
+            std::cout << "po_chunk_next: " << po_name << std::endl;
             break;
         }
         default:

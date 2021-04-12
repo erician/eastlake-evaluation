@@ -1,4 +1,4 @@
-ALL: run_before_crash
+ALL: run_before_crash run_after_crash
 .PHONY: clean all
 
 DEFAULT:
@@ -7,7 +7,7 @@ CC= g++
 LD = g++
 
 LIBS = -lm -lpthread -lrt -latomic
-CFLAGS = -g -Wall -Wno-unused -Wno-return-type -Wno-sign-compare -std=c++17 -I. -O0
+CFLAGS = -g -Wall -Wno-unused -Wno-return-type -Wno-sign-compare -std=c++17 -I. -O3
 CFLAGS += -I../include
 
 JUNK = *~ *.o *.a *_ut *-* test
@@ -15,6 +15,11 @@ JUNK = *~ *.o *.a *_ut *-* test
 run_before_crash: run_before_crash.o
 	$(LD) $(CFLAGS) -o $@ $^ $(LIBS)
 run_before_crash.o: run_before_crash.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+run_after_crash: run_after_crash.o
+	$(LD) $(CFLAGS) -o $@ $^ $(LIBS)
+run_after_crash.o: run_after_crash.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
