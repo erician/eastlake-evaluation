@@ -11,10 +11,10 @@
 #include <emmintrin.h>
 
 #define PO_NAME             "multiple_pages_seqwrite"
-// #define PO_SIZE             (16*1024*1024L)
-// #define EXTEND_MAP_SIZE     (1*1024*1024L)
-#define PO_SIZE             (1600*1024*1024L)
-#define EXTEND_MAP_SIZE     (100*1024*1024L)
+#define PO_SIZE             (16*1024*1024*1024L)
+#define EXTEND_MAP_SIZE     (1*1024*1024*1024L)
+// #define PO_SIZE             (1600*1024*1024L)
+// #define EXTEND_MAP_SIZE     (100*1024*1024L)
 #define BLOCK_SIZE          (64L)
 #define BLOCK_NUM           (EXTEND_MAP_SIZE/BLOCK_SIZE)
 #define MAX_THREAD_NUM           (16L)
