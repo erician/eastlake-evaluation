@@ -1,6 +1,6 @@
-.PHONY: clean ll-test
+.PHONY: clean
 
-DEFAULT: test
+DEFAULT: randwrite randread seqread seqwrite
 # Define the tools we are going to use
 CC= g++
 LD = g++
@@ -37,4 +37,4 @@ seqwrite.o: seqwrite.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f  test $(JUNK) seqwrite seqread randwrite randread bw
+	rm -f  test $(JUNK) seqwrite seqread randwrite randread bw lat_bw
