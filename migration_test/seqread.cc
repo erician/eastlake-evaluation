@@ -9,6 +9,7 @@
 #include <sched.h>
 #include <mutex>
 #include <emmintrin.h>
+#include <unistd.h>
 
 #define PO_NAME             "migration_seqread"
 // #define PO_SIZE             (16*1024*1024*1024L)
@@ -87,9 +88,13 @@ void Prepare() {
         memset(prepare_addrs[i], 0, PREPARE_EXTEND_SIZE);
     }
 
+    
+    // g_mutex.unlock();
+}
+
+void Prepare_data() {
     addr = (char *)malloc(sizeof(char) * ACCESS_SIZE);
     memset(addr, 0, ACCESS_SIZE);
-    // g_mutex.unlock();
 }
 
 void Free() {
@@ -122,8 +127,7 @@ int main() {
     std::thread *threads[MAX_THREAD_NUM];
 
     printf("start to Prepare\n");
-    Prepare();
-    Free();
+    Prepare_data();
     printf("Prepare Over\n");
 
     for(int t=0; t<thread_num_cnt; t+=1) {
@@ -132,6 +136,6 @@ int main() {
         end = my_second();
         printf("time: %lf(s), bandwidth: %lf(MB)\n", end-start, (ACCESS_SIZE * LOOP_NUM)/(end-start)/1024/1024);
     }
-
+    
     Cleanup();
 }

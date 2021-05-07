@@ -9,8 +9,9 @@
 #include <sched.h>
 #include <mutex>
 #include <emmintrin.h>
+#include <unistd.h>
 
-#define PO_NAME             "migration_seqwrite"
+#define PO_NAME             "migration_seqread"
 // #define PO_SIZE             (16*1024*1024*1024L)
 // #define EXTEND_MAP_SIZE     (1*1024*1024*1024L)
 #define PO_SIZE             (1600*1024*1024L)
@@ -28,7 +29,7 @@
 #define ACCESS_SIZE     (128*1024*1024L)
 #define ACCESS_BLOCK_SIZE          (4096L)
 #define ACCESS_BLOCK_NUM           (ACCESS_SIZE/ACCESS_BLOCK_SIZE)
-#define LOOP_NUM    (5)
+#define LOOP_NUM    (10)
 
 // const int thread_num_cnt = 5;
 // const int thread_num[5] = {1, 2, 4, 8, 16};
@@ -87,15 +88,8 @@ void Prepare() {
         memset(prepare_addrs[i], 0, PREPARE_EXTEND_SIZE);
     }
 
-    addr = (char *)malloc(sizeof(char) * ACCESS_SIZE);
-    memset(addr, 0, ACCESS_SIZE);
+    
     // g_mutex.unlock();
-}
-
-void Free() {
-    for (long i = 0; i < PREPARE_SIZE/PREPARE_EXTEND_SIZE; i++) {
-        free(prepare_addrs[i]);
-    }
 }
 
 void Prepare_data() {
@@ -103,23 +97,10 @@ void Prepare_data() {
     memset(addr, 0, ACCESS_SIZE);
 }
 
-void Cleanup() {
-    printf("start to Cleanup\n");
-    free(addr);
-    printf("Cleanup successfully\n");
-}
-
-void SeqWriteThread() {
-    char *buff = (char *)malloc(sizeof(char) * ACCESS_BLOCK_SIZE);
-    memset(buff, 'a', ACCESS_BLOCK_SIZE);
-    
-    for (long loop = 0; loop < LOOP_NUM; loop++) {
-        for (long i = 0; i < ACCESS_BLOCK_NUM; i++) {
-            // memcpy(addr + i * ACCESS_BLOCK_SIZE, buff, ACCESS_BLOCK_SIZE);
-            NTwrite(addr + i * ACCESS_BLOCK_SIZE, buff, ACCESS_BLOCK_SIZE);
-        }
+void Free() {
+    for (long i = 0; i < PREPARE_SIZE/PREPARE_EXTEND_SIZE; i++) {
+        free(prepare_addrs[i]);
     }
-    free(buff);
 }
     
 
@@ -129,15 +110,7 @@ int main() {
     std::thread *threads[MAX_THREAD_NUM];
 
     printf("start to Prepare\n");
-    Prepare_data();
+    Prepare();
+    Free();
     printf("Prepare Over\n");
-
-    for(int t=0; t<thread_num_cnt; t+=1) {
-        start = my_second();
-        SeqWriteThread();
-        end = my_second();
-        printf("time: %lf(s), bandwidth: %lf(MB)\n", end-start, (ACCESS_SIZE * LOOP_NUM)/(end-start)/1024/1024);
-    }
-
-    Cleanup();
 }

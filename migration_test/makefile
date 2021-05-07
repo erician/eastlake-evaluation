@@ -1,4 +1,4 @@
-all: seqread seqwrite
+all: seqread seqwrite prepare
 .PHONY: clean all
 
 DEFAULT: test
@@ -22,5 +22,10 @@ seqwrite: seqwrite.o
 seqwrite.o: seqwrite.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+prepare: prepare.o
+	$(LD) $(CFLAGS) -o $@ $^ $(LIBS) 
+prepare.o: prepare.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 clean:
-	rm -f $(JUNK) seqwrite seqread
+	rm -f $(JUNK) seqwrite seqread prepare
