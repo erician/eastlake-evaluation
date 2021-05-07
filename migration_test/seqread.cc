@@ -29,7 +29,7 @@
 #define ACCESS_SIZE     (128*1024*1024L)
 #define ACCESS_BLOCK_SIZE          (4096L)
 #define ACCESS_BLOCK_NUM           (ACCESS_SIZE/ACCESS_BLOCK_SIZE)
-#define LOOP_NUM    (5)
+#define LOOP_NUM    (500)
 
 // const int thread_num_cnt = 5;
 // const int thread_num[5] = {1, 2, 4, 8, 16};
@@ -93,6 +93,7 @@ void Prepare() {
 }
 
 void Prepare_data() {
+    set_affinity(0);
     addr = (char *)malloc(sizeof(char) * ACCESS_SIZE);
     memset(addr, 0, ACCESS_SIZE);
 }
